@@ -1,0 +1,6 @@
+{
+  "name": "COREPACK Orchestration Platform",
+  "description": "Enterprise-grade agent orchestration platform, Corepack builder engine, HITL approval queue, and calibrated agent playground.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
