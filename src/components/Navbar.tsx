@@ -12,14 +12,16 @@ import {
   Download,
   RotateCcw,
   BookOpen,
+  Fingerprint,
+  LayoutDashboard,
 } from 'lucide-react';
 import { CorepackConfig } from '../types';
-import { PRESET_COREPACKS } from '../data/presets';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   currentConfig: CorepackConfig;
+  presets: Record<string, CorepackConfig>;
   onSelectPreset: (presetId: string) => void;
   onResetToDefault: () => void;
   onExportJson: () => void;
@@ -30,12 +32,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   currentConfig,
+  presets,
   onSelectPreset,
   onResetToDefault,
   onExportJson,
   defectCount,
 }) => {
   const tabs = [
+    { id: 'dashboard', label: '0. Overview Dashboard', icon: LayoutDashboard, badge: 'Launch' },
     { id: 'prompts', label: '1. Prompt Definition', icon: FileCode, badge: null },
     { id: 'model', label: '2. Model Parameters', icon: Sliders, badge: null },
     { id: 'tools', label: '3. Tool Definitions', icon: Wrench, badge: `${currentConfig.tools.filter((t) => t.enabled).length} Tools` },
@@ -43,6 +47,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'playground', label: '5. Calibrated Playground', icon: Terminal, badge: 'Live' },
     { id: 'degradation', label: '6. Degradation Gateway', icon: ShieldAlert, badge: 'Adaptive' },
     { id: 'hitl', label: '7. HITL Task Queue', icon: ClipboardCheck, badge: 'Audit' },
+    { id: 'stacker', label: '8. Stack Builder', icon: Layers, badge: 'New' },
+    { id: 'authpack', label: '9. AUTHPACK Gate', icon: Fingerprint, badge: 'Secure' },
   ];
 
   return (
@@ -83,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onChange={(e) => onSelectPreset(e.target.value)}
                 className="bg-slate-900 text-xs text-slate-200 border border-slate-700 rounded-md px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
-                {Object.values(PRESET_COREPACKS).map((preset) => (
+                {(Object.values(presets) as CorepackConfig[]).map((preset) => (
                   <option key={preset.metadata.id} value={preset.metadata.id}>
                     {preset.metadata.name} (v{preset.metadata.version})
                   </option>
@@ -114,7 +120,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Tab Navigation System */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex space-x-1 overflow-x-auto py-2 scrollbar-none border-t border-slate-800/60">
+        <nav className="flex flex-wrap gap-1.5 py-2.5 border-t border-slate-800/60">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

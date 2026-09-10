@@ -23,11 +23,46 @@ Generative AI models are fundamentally optimized for conversational fluency, hel
 
 ---
 
-## 2. What It Is
+## 2. What It Is: Decoupling Capability from Personality
 
-The platform provides a dual-layer architectural model:
-- **Layer 1: The Cognitive Substrate (v3.0)** — An immutable base operational contract enforcing Honesty, Calibration, Truth-Tethering, Intellectual Independence, and Structured Error Correction. Persona overlays may modify voice or specialized domain methods, but are strictly prohibited from degrading calibration or suppressing uncertainty.
-- **Layer 2: Specialized Corepack Overlays (v2.0)** — Declarative configuration bundles specifying domain expertise, fail-fast execution gates, sandboxed filesystem boundaries, typed tool schemas, and router-readable state transition rules.
+A fundamental architectural insight of this system is the decoupling of **LOREPACK** (personality/persona) from **COREPACK** (functional skills/protocols):
+
+```
+                     ┌─────────────────────────────────────────────────────────┐
+                     │              COGNITIVE SUBSTRATE (v3.0)                 │
+                     │  (Immutable Grounding, Honesty, Uncertainty Markers)    │
+                     └────────────────────────────┬────────────────────────────┘
+                                                  │
+                   ┌──────────────────────────────┴──────────────────────────────┐
+                   ▼                                                             ▼
+    ┌─────────────────────────────┐                               ┌─────────────────────────────┐
+    │     MODE A: LAYERED         │                               │     MODE B: STANDALONE      │
+    │  (COREPACK + LOREPACK)      │                               │   (COREPACK AGENT-ONLY)     │
+    ├─────────────────────────────┤                               ├─────────────────────────────┤
+    │  [LOREPACK: Persona]        │                               │  [COREPACK: Pure Engine]    │
+    │  • Voice, Tone & Persona    │                               │  • Zero Persona / No Fluff  │
+    │  • Cultural/Brand Worldview │                               │  • Deterministic Execution  │
+    │              ▲              │                               │  • Automated Microservice   │
+    │              │ (mounted on) │                               │  • Multi-Agent Pipe Node    │
+    │  [COREPACK: Engine]         │                               │  • Headless Pipeline Worker │
+    │  • Portable Skill Manifest  │                               │                             │
+    │  • Fail-Fast Directives     │                               │                             │
+    │  • Typed Zod Schemas & RBAC │                               │                             │
+    │  • Revenue-Grade Protocol   │                               │                             │
+    └─────────────────────────────┘                               └─────────────────────────────┘
+```
+
+### The Architectural Duality:
+- **The LOREPACK (Where Persona Lives):**  
+  Defines the character, tone, emotional intelligence, brand voice, role-playing nuances, and conversational style of an agent. It provides contextual depth and user rapport, but on its own lacks deterministic execution guarantees.
+- **The COREPACK (Where Skills & Instructions Live):**  
+  A portable, interchangeable operational payload containing functional skills, execution protocols, tool bindings, sandbox filesystem boundaries, typed validation contracts, fail-fast bash directives, and output formatting standards.
+
+### Two Modes of Deployment:
+1. **Layered Composition (`LOREPACK + COREPACK`):**  
+   The COREPACK is layered directly on top of an existing LOREPACK persona. The agent maintains its unique voice and conversational character, but its underlying reasoning, tool usage, and uncertainty disclosures are strictly bound by the COREPACK's substrate contracts. *The persona can never degrade calibration or conceal missing facts.*
+2. **Standalone Agent-Only Mode (`COREPACK Standalone`):**  
+   The COREPACK operates as a headless, zero-personality execution node within an automated orchestration pipeline (e.g., automated code linter, state routing node, double-entry financial reconciler, architecture auditor). It emits zero conversational fluff, adhering purely to strict machine-readable or revenue-grade protocols.
 
 ---
 

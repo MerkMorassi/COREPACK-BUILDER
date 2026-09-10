@@ -39,8 +39,8 @@ export const ModelParametersTab: React.FC<ModelParametersTabProps> = ({
 
   const modelOptions: { id: ModelName; name: string; description: string; badge: string; isPro?: boolean }[] = [
     {
-      id: 'gemini-3.7-flash',
-      name: 'Gemini 3.7 Flash',
+      id: 'gemini-3.8-flash',
+      name: 'Gemini 3.8 Flash',
       description: 'Default primary model. High speed, low latency, calibrated reasoning with full thinking support.',
       badge: 'Recommended Default',
     },

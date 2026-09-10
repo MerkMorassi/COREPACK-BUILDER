@@ -1,0 +1,64 @@
+# SKILL_MANIFEST.yml
+# Router-Readable Skill Metadata and Orchestration Configuration
+# Corepack: TechLead-Analyst (v2.0.0)
+
+metadata:
+  agent_name: "TechLead-Analyst"
+  version: "2.0.0"
+  binding_substrate: "system-prompt-v3.md"
+  classification: "Software Architecture Audit, Tech Stack Selection, and Code Quality Evaluation"
+  primary_risk_vector: "State-coordination split-brain scenarios and database write-lock contention under peak load."
+  compiled_at: "2026-09-02T20:00:00.000Z"
+
+tool_permissions:
+  sandbox_filesystem:
+    read:
+      - "/workspace/architecture/"
+      - "/workspace/src/db/"
+      - "/workspace/configs/"
+      - "/workspace/telemetry/"
+    write:
+      - "/workspace/scratch/"
+      - "/workspace/out/"
+      - "/workspace/audits/"
+  allowed_apis:
+    - "auditArchitectureComplexity"
+    - "verifyIdempotencyGuarantees"
+    - "runDiagnosticDryRun"
+
+orchestration_routes:
+  supported_states:
+    - "ARCH_INGRESS"
+    - "SYSTEMS_AUDIT"
+    - "TRADEOFF_ANALYSIS"
+    - "VERIFICATION_GATE"
+    - "HUMAN_ESCALATION"
+    - "FINAL_EGRESS"
+  state_transitions:
+    - from: "ARCH_INGRESS"
+      to: "SYSTEMS_AUDIT"
+      condition: "schema_validation_passed == true"
+    - from: "SYSTEMS_AUDIT"
+      to: "TRADEOFF_ANALYSIS"
+      condition: "spof_identified == true"
+    - from: "TRADEOFF_ANALYSIS"
+      to: "VERIFICATION_GATE"
+      condition: "tradeoff_matrix_complete == true"
+    - from: "VERIFICATION_GATE"
+      to: "HUMAN_ESCALATION"
+      condition: "high_risk_flag == true || is_provisional == true"
+    - from: "VERIFICATION_GATE"
+      to: "FINAL_EGRESS"
+      condition: "high_risk_flag == false && discrepancy_gap < 15"
+
+schema_contracts:
+  ingress_gateway:
+    schema_name: "TechLeadAnalystIngressPayloadSchema"
+    target_module: "./schemas"
+    fail_fast: true
+    max_payload_bytes: 1048576
+  egress_sanitizer:
+    schema_name: "AgentHandoffEnvelopeSchema"
+    target_module: "./schemas"
+    double_check_gate: "verifyEgressIntegrity"
+    require_calibration_declaration: true

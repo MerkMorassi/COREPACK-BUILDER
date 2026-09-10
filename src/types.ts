@@ -4,7 +4,7 @@
  */
 
 export type ModelName =
-  | 'gemini-3.7-flash'
+  | 'gemini-3.8-flash'
   | 'gemini-3.1-pro-preview'
   | 'gemini-3.1-flash-lite'
   | 'gemini-3.1-flash-image'
@@ -194,6 +194,10 @@ export interface HitlTask {
   reviewedBy?: string;
   rejectionReason?: string;
   logs: TaskLog[];
+  taskType?: string;
+  summary?: string;
+  riskLevel?: 'HIGH' | 'MEDIUM' | 'LOW';
+  reviewerNotes?: string;
 }
 
 export interface DegradationStepResult {
@@ -241,3 +245,29 @@ export interface LedgerAuditResult {
   provisional_count: number;
   issues: string[];
 }
+
+export interface AuthpackRule {
+  id: string;
+  role: string;
+  action: string;
+  targetCorepackId: string; // 'ALL' or specific ID
+  allowed: boolean;
+  minConfidenceRequired: 'fact' | 'inference' | 'guess';
+}
+
+export interface AuthpackVerificationRequest {
+  agentId: string;
+  role: string;
+  action: string;
+  targetCorepackId: string;
+  confidenceRating: 'fact' | 'inference' | 'guess';
+}
+
+export interface AuthpackVerificationResponse {
+  granted: boolean;
+  reason: string;
+  requestedAt: string;
+  authToken?: string;
+  auditChain: string[];
+}
+

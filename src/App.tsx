@@ -9,6 +9,7 @@ import { DEFAULT_COREPACK, PRESET_COREPACKS } from './data/presets';
 import { compileAllArtifacts } from './utils/compiler';
 
 import { Navbar } from './components/Navbar';
+import { DashboardTab } from './components/DashboardTab';
 import { PromptDefinitionTab } from './components/PromptDefinitionTab';
 import { ModelParametersTab } from './components/ModelParametersTab';
 import { ToolDefinitionsTab } from './components/ToolDefinitionsTab';
@@ -16,9 +17,13 @@ import { CompiledArtifactsTab } from './components/CompiledArtifactsTab';
 import { PlaygroundTab } from './components/PlaygroundTab';
 import { AdaptiveDegradationTab } from './components/AdaptiveDegradationTab';
 import { HitlQueueTab } from './components/HitlQueueTab';
+import { CorepackStackerTab } from './components/CorepackStackerTab';
+import { AuthpackTab } from './components/AuthpackTab';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('prompts');
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [isStandaloneAuthpack, setIsStandaloneAuthpack] = useState<boolean>(false);
+  const [presets, setPresets] = useState<Record<string, CorepackConfig>>(PRESET_COREPACKS);
   const [config, setConfig] = useState<CorepackConfig>(DEFAULT_COREPACK);
 
   // Compute validation issues count
@@ -26,9 +31,9 @@ export default function App() {
   const defectCount = artifacts.defectValidationResult.errors.length;
 
   const handleSelectPreset = (presetId: string) => {
-    if (PRESET_COREPACKS[presetId]) {
+    if (presets[presetId]) {
       // Clone deeply to prevent mutability leaks
-      setConfig(JSON.parse(JSON.stringify(PRESET_COREPACKS[presetId])));
+      setConfig(JSON.parse(JSON.stringify(presets[presetId])));
     }
   };
 
@@ -50,6 +55,25 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleSaveCustomPreset = (newConfig: CorepackConfig) => {
+    const newId = newConfig.metadata.id;
+    setPresets((prev) => ({
+      ...prev,
+      [newId]: newConfig,
+    }));
+    setConfig(newConfig);
+    setActiveTab('prompts');
+  };
+
+  if (isStandaloneAuthpack) {
+    return (
+      <AuthpackTab
+        isStandalone={true}
+        onExitStandalone={() => setIsStandaloneAuthpack(false)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white antialiased">
       {/* Tabbed Navigation Header */}
@@ -57,6 +81,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         currentConfig={config}
+        presets={presets}
         onSelectPreset={handleSelectPreset}
         onResetToDefault={handleResetToDefault}
         onExportJson={handleExportJson}
@@ -65,6 +90,14 @@ export default function App() {
 
       {/* Main Content Viewport */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {activeTab === 'dashboard' && (
+          <DashboardTab
+            config={config}
+            defectCount={defectCount}
+            onNavigateTab={setActiveTab}
+          />
+        )}
+
         {activeTab === 'prompts' && (
           <PromptDefinitionTab
             config={config}
@@ -106,6 +139,18 @@ export default function App() {
 
         {activeTab === 'hitl' && (
           <HitlQueueTab />
+        )}
+
+        {activeTab === 'stacker' && (
+          <CorepackStackerTab
+            availablePresets={presets}
+            onSaveCustomPreset={handleSaveCustomPreset}
+            onNavigateToPlayground={() => setActiveTab('playground')}
+          />
+        )}
+
+        {activeTab === 'authpack' && (
+          <AuthpackTab onEnterStandalone={() => setIsStandaloneAuthpack(true)} />
         )}
       </main>
 

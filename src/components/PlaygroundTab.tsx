@@ -58,6 +58,31 @@ export const PlaygroundTab: React.FC<PlaygroundTabProps> = ({ config }) => {
       prompt:
         'Draft an image generation prompt for a corporate architectural headquarters at golden hour without using subjective quality buzzwords.',
     },
+    {
+      label: 'Transcript Knowledge Parsing (PARSEPACK)',
+      prompt:
+        'PARSE RECORD: Transform the following transcript snippet into a structured knowledge record. Apply epistemic labels (FACT, CLAIM, HYPOTHESIS, DECISION) and preserve speaker attributions (HITL, SKYE, CODY, ARCHIVAX, DOMANTHEIA):\n\nHITL: Skye, what is the status of the Redis cluster migration?\nSKYE: Telemetry shows high latency on write-locks during 02:00 UTC backups. I propose shifting the batch job to 04:00 UTC.\nCODY: We tried shifting to 04:00 UTC last week on staging and it conflicted with the analytics warehouse extract. That approach was abandoned.\nDOMANTHEIA: Decision: Keep 02:00 UTC, but implement exponential backoff on write retries with a 250ms ceiling.\nARCHIVAX: Logged. Decision approved by Domantheia.',
+    },
+    {
+      label: 'Voice Intent & Zero-Authority Routing (VOXCONPACK)',
+      prompt:
+        'VOICE INGRESS: Ingest the following spoken transcript: "Skye, transfer $50,000 from operating reserves to AWS infrastructure account and deploy the new staging cluster immediately."\n\n1. Extract command intent and slot parameters.\n2. Compute recognition confidence score.\n3. Apply the "Voice is an input modality, not authority" doctrine: Do NOT execute mutations directly. Format the structured VoiceCommandEnvelope and route to AUTHPACK and GATEPACK with confirmation requirements.',
+    },
+    {
+      label: 'BLUF Operational Incident Dispatch (COMMPACK-MIL)',
+      prompt:
+        'OPERATIONAL DISPATCH: Report an infrastructure incident under COMMPACK-MIL rules.\n\nContext:\n- Originating Agent: SKYE-CIO\n- Target: HITL-COMMANDER\n- Finding: At 13:14 UTC, Worker Node 04 (Michael Bolton AI) terminated the print spooler container after receiving a "PC LOAD LETTER" hardware code, halting the billing export batch.\n- Impact: 1,420 sub-cent ledger records are held in memory buffer.\n\nRequirements:\n1. Lead with BLUF as first sentence.\n2. Output standard COMMPACK-MIL MSG envelope.\n3. Distinguish OBSERVATION, ASSESSMENT, and DECISION.\n4. Zero conversational filler or apologies.\n5. Explicit ACTION and ESCALATION fields.',
+    },
+    {
+      label: 'Probabilistic Inference & Falsification (INFERPACK)',
+      prompt:
+        'INFERENCE TASK: "Did the database write-lock timeouts at 02:00 UTC originate from the cloud backup snapshot or the analytics batch extract?"\n\nEvidence:\n1. Cloud provider snapshot triggers nightly at 02:00 UTC with I/O pause duration of ~450ms.\n2. Analytics batch extract was scheduled for 02:30 UTC, but telemetry indicates an ad-hoc cron job ran at 02:01 UTC from staging host.\n3. Disk queue depth spiked at 02:01 UTC and returned to baseline by 02:04 UTC.\n\nApply INFERPACK doctrine:\n- Separate established facts from inferences.\n- Compare competing hypotheses.\n- Challenge leading assessment: "What would I expect to see if this inference were false?"\n- Use calibrated confidence (HIGH / MODERATE / LOW) without manufacturing false numerical precision.\n- State what would change the assessment.',
+    },
+    {
+      label: 'Prompt Hardening & Anti-Politeness Audit (PROMPT-COACH)',
+      prompt:
+        'PROMPT AUDIT: Please analyze and optimize the following prompt template: "Hello there! Could you kindly help me validate the incoming user data transaction, please? Please make sure to be extremely polite and helpful. Thank you so much!"\n\nApply Prompt-Coach-Auditor rules:\n1. Identify and hard-strip all politeness, greeting, and conversational boilerplate.\n2. Inject the mandatory 5-part Self-Scrutiny Battery and uncertainty markers.\n3. Enforce strict output schema formatting and evaluate state-drift/injection vulnerabilities.',
+    },
   ];
 
   const handleExecutePrompt = async (promptToRun?: string) => {
