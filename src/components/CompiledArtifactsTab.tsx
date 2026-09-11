@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Layers,
   Copy,
@@ -11,6 +11,7 @@ import {
   FileText,
   ShieldCheck,
   Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import { CorepackConfig, CompiledArtifacts } from '../types';
 import { compileAllArtifacts } from '../utils/compiler';
@@ -23,8 +24,45 @@ export const CompiledArtifactsTab: React.FC<CompiledArtifactsTabProps> = ({ conf
   const [activeFile, setActiveFile] = useState<'prompt' | 'manifest' | 'schemas' | 'tests'>('prompt');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const artifacts = compileAllArtifacts(config);
-  const { defectValidationResult } = artifacts;
+  // Compilation state
+  const [isCompiling, setIsCompiling] = useState<boolean>(true);
+  const [progress, setProgress] = useState<number>(0);
+  const [currentStep, setCurrentStep] = useState<string>('Initializing COREPACK Compiler Engine...');
+  const [artifacts, setArtifacts] = useState<CompiledArtifacts | null>(null);
+
+  // Trigger Compilation Effect
+  const runCompilation = () => {
+    setIsCompiling(true);
+    setProgress(0);
+    setCurrentStep('Mounting substrate compilation schema...');
+
+    const steps = [
+      { p: 15, msg: 'Analyzing substrate binding contract (system-prompt-v3.md)...' },
+      { p: 35, msg: 'Extracting and parsing revenue-grade Markdown segments...' },
+      { p: 55, msg: 'Executing conversation politeness filters and boilerplate scans...' },
+      { p: 75, msg: 'Auditing confidence thresholds and integration constraints...' },
+      { p: 90, msg: 'Compiling output schemas and test validation blocks...' },
+      { p: 100, msg: 'Compilation complete! Validating integrity gates...' },
+    ];
+
+    let currentIdx = 0;
+    const interval = setInterval(() => {
+      if (currentIdx < steps.length) {
+        setProgress(steps[currentIdx].p);
+        setCurrentStep(steps[currentIdx].msg);
+        currentIdx++;
+      } else {
+        clearInterval(interval);
+        const result = compileAllArtifacts(config);
+        setArtifacts(result);
+        setIsCompiling(false);
+      }
+    }, 250); // Total 1.5s interactive compile timeline
+  };
+
+  useEffect(() => {
+    runCompilation();
+  }, [config]);
 
   const handleCopy = (content: string, key: string) => {
     navigator.clipboard.writeText(content);
@@ -44,6 +82,55 @@ export const CompiledArtifactsTab: React.FC<CompiledArtifactsTabProps> = ({ conf
     URL.revokeObjectURL(url);
   };
 
+  // If compilation in progress, render the loader viewport
+  if (isCompiling || !artifacts) {
+    return (
+      <div className="space-y-6" id="compiling-loader-container">
+        {/* Header Banner */}
+        <div className="flex items-center justify-between bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+          <div>
+            <h2 className="text-base font-semibold text-slate-100 flex items-center gap-2">
+              <Layers className="w-5 h-5 text-indigo-400 animate-spin" />
+              Compiling Corepack Artifacts...
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              The COREPACK Compiler is translating declarative parameters into production-grade bundles.
+            </p>
+          </div>
+        </div>
+
+        {/* Center Progress Box */}
+        <div className="bg-slate-900/80 p-8 rounded-xl border border-slate-800 flex flex-col items-center justify-center text-center space-y-6 min-h-[350px]">
+          <div className="relative flex items-center justify-center">
+            <div className="absolute w-16 h-16 rounded-full border-4 border-indigo-500/20 animate-pulse"></div>
+            <RefreshCw className="w-10 h-10 text-indigo-500 animate-spin" />
+          </div>
+
+          <div className="space-y-2 max-w-md w-full">
+            <div className="flex justify-between items-center text-xs font-mono text-slate-400">
+              <span className="truncate">{currentStep}</span>
+              <span className="font-bold text-indigo-400">{progress}%</span>
+            </div>
+
+            {/* Glowing outer bar container */}
+            <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-850">
+              <div
+                style={{ width: `${progress}%` }}
+                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 rounded-full transition-all duration-300 shadow-md shadow-indigo-500/50"
+              ></div>
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-500 font-mono">
+            BUILD COMPILER MODULE v2.0 • AGENT PRE-FLIGHT COMPLIANCE GUARD
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { defectValidationResult } = artifacts;
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -59,6 +146,17 @@ export const CompiledArtifactsTab: React.FC<CompiledArtifactsTabProps> = ({ conf
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Re-compile button */}
+          <button
+            type="button"
+            onClick={runCompilation}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Force rebuild and run compilation diagnostics again"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+            <span>Re-Compile Engine</span>
+          </button>
+
           <button
             id="copy-compiled-artifacts-btn"
             type="button"
@@ -66,7 +164,7 @@ export const CompiledArtifactsTab: React.FC<CompiledArtifactsTabProps> = ({ conf
               const serialized = JSON.stringify(artifacts, null, 2);
               handleCopy(serialized, 'compiled-artifacts');
             }}
-            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3.5 py-1.5 bg-slate-850 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Copy serialized compiled artifact JSON to system clipboard for debugging"
           >
             {copiedKey === 'compiled-artifacts' ? (
@@ -241,18 +339,14 @@ export const CompiledArtifactsTab: React.FC<CompiledArtifactsTabProps> = ({ conf
             <button
               onClick={() => {
                 let content = artifacts.systemPromptMd;
-                let fname = 'SYSTEM_PROMPT.md';
                 if (activeFile === 'manifest') {
                   content = artifacts.skillManifestYml;
-                  fname = 'SKILL_MANIFEST.yml';
                 }
                 if (activeFile === 'schemas') {
                   content = artifacts.schemasTs;
-                  fname = 'schemas.ts';
                 }
                 if (activeFile === 'tests') {
                   content = artifacts.testPromptsMd;
-                  fname = 'TEST_PROMPTS.md';
                 }
                 handleCopy(content, activeFile);
               }}
