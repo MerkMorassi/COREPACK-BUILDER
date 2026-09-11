@@ -606,6 +606,244 @@ app.post('/api/authpack/verify', (req: Request, res: Response) => {
   });
 });
 
+// ==========================================
+// COMMPACK OPERATIONAL PROFILE ENDPOINTS
+// ==========================================
+
+export interface CommpackMessage {
+  id: string;
+  from: string;
+  to: string;
+  priority: 'ROUTINE' | 'PRIORITY' | 'URGENT' | 'IMMEDIATE';
+  type: string;
+  status: string;
+  bluf: string;
+  body: string;
+  timestamp: string;
+  isValid: boolean;
+  diagnostics: string[];
+}
+
+export interface CommpackBoundary {
+  id: string;
+  fromAgent: string;
+  toAgent: string;
+  allowedTypes: string[];
+  enabled: boolean;
+}
+
+let commpackMessages: CommpackMessage[] = [
+  {
+    id: 'msg-1',
+    from: 'SRE-DevOps-Coder',
+    to: 'TechLead-Analyst',
+    priority: 'PRIORITY',
+    type: 'ALERT',
+    status: 'DEGRADED',
+    bluf: 'Database read replica replication delay exceeded 120 seconds.',
+    body: `MSG\nFROM: SRE-DevOps-Coder\nTO: TechLead-Analyst\nPRIORITY: PRIORITY\nTYPE: ALERT\nSTATUS: DEGRADED\nBLUF: Database read replica replication delay exceeded 120 seconds.\nOBSERVATION: Cloud Spanner read-replica latency metric measures 142 seconds.\nASSESSMENT: High disk I/O on primary instance causes lock escalation during bulk ingestion.\nEVIDENCE: Latency metric id: metrics-spanner-repl-09, timestamp: 2026-09-11T08:12:00Z\nACTION: Throttle raw ingestion batch rate to 500 records/sec until delay is under 10s.\nTIMESTAMP: 2026-09-11T08:12:05Z\nPROVENANCE: GKE-Metrics-Daemon-v2\nEND`,
+    timestamp: new Date(Date.now() - 300000).toISOString(),
+    isValid: true,
+    diagnostics: [],
+  },
+  {
+    id: 'msg-2',
+    from: 'Finance-Audit-Validator',
+    to: 'Human Operator',
+    priority: 'ROUTINE',
+    type: 'REPORT',
+    status: 'COMPLETE',
+    bluf: 'Reconciliation task complete for ledger-q2-reconciled. Total credits and debits match exactly.',
+    body: `MSG\nFROM: Finance-Audit-Validator\nTO: Human Operator\nPRIORITY: ROUTINE\nTYPE: REPORT\nSTATUS: COMPLETE\nBLUF: Reconciliation task complete for ledger-q2-reconciled. Total credits and debits match exactly.\nOBSERVATION: Audited 1,420 transaction records.\nASSESSMENT: Zero float drift detected. Ledgers are balanced in integer cents.\nEVIDENCE: debit_sum: 84920000, credit_sum: 84920000, imbalance_delta: 0.\nACTION: Lock ledger q2 reconciled dataset.\nTIMESTAMP: 2026-09-11T08:10:00Z\nPROVENANCE: ledger-audit-runner\nEND`,
+    timestamp: new Date(Date.now() - 600000).toISOString(),
+    isValid: true,
+    diagnostics: [],
+  },
+];
+
+let commpackBoundaries: CommpackBoundary[] = [
+  { id: 'b-1', fromAgent: 'SRE-DevOps-Coder', toAgent: 'TechLead-Analyst', allowedTypes: ['ALERT', 'REPORT', 'REQUEST'], enabled: true },
+  { id: 'b-2', fromAgent: 'Finance-Audit-Validator', toAgent: 'Human Operator', allowedTypes: ['REPORT', 'ALERT', 'ESCALATION'], enabled: true },
+  { id: 'b-3', fromAgent: 'TechLead-Analyst', toAgent: 'SRE-DevOps-Coder', allowedTypes: ['COMMAND', 'RESPONSE'], enabled: true },
+  { id: 'b-4', fromAgent: 'SRE-DevOps-Coder', toAgent: 'Finance-Audit-Validator', allowedTypes: ['ALERT'], enabled: false },
+];
+
+// In-depth COMMPACK-MIL Grammar and Boundary Validator
+function validateCommpackMessage(from: string, to: string, type: string, status: string, bluf: string, body: string): { isValid: boolean; diagnostics: string[] } {
+  const diagnostics: string[] = [];
+
+  // 1. Core Field Validations
+  if (!from) diagnostics.push('CRITICAL: Header field "FROM" is missing or unpopulated.');
+  if (!to) diagnostics.push('CRITICAL: Header field "TO" is missing or unpopulated.');
+  if (!type) diagnostics.push('CRITICAL: Header field "TYPE" is missing or unpopulated.');
+  if (!status) diagnostics.push('CRITICAL: Header field "STATUS" is missing or unpopulated.');
+  if (!bluf) diagnostics.push('CRITICAL: Bottom Line Up Front (BLUF) is mandatory and cannot be empty.');
+
+  // 2. Validate envelope syntax
+  if (!body.startsWith('MSG')) diagnostics.push('SYNTAX: Message block must initiate with "MSG" line.');
+  if (!body.trim().endsWith('END')) diagnostics.push('SYNTAX: Message block must terminate with "END" line.');
+
+  // 3. Envelope structural mappings
+  const requiredKeys = ['FROM:', 'TO:', 'PRIORITY:', 'TYPE:', 'STATUS:', 'BLUF:'];
+  requiredKeys.forEach(k => {
+    if (!body.includes(k)) {
+      diagnostics.push(`STRUCTURE: Missing required envelope tag "${k}" inside the compiled block.`);
+    }
+  });
+
+  // 4. Conversational Filler Check (Zero Filler mandate)
+  const conversationalFillers = [
+    { word: 'happy to help', fix: 'Avoid polite conversational boilerplate.' },
+    { word: 'apologize', fix: 'State facts and status directly; do not issue apologies.' },
+    { word: 'sorry', fix: 'Redundant polite framing.' },
+    { word: 'please', fix: 'Omit. State directives using direct modal imperatives (must/will).' },
+    { word: 'thank you', fix: 'Avoid conversational sign-offs.' },
+    { word: 'great question', fix: 'Conversational filler is prohibited.' },
+    { word: 'sure', fix: 'Omit conversational affirmations.' },
+    { word: 'hope this helps', fix: 'Prohibited sign-off.' }
+  ];
+
+  const lowerBody = body.toLowerCase();
+  conversationalFillers.forEach(cf => {
+    if (lowerBody.includes(cf.word)) {
+      diagnostics.push(`FILLER: Banned conversational phrase "${cf.word}" detected. ${cf.fix}`);
+    }
+  });
+
+  // 5. Banned Direct Language (Anti-MILSPEAK and high economy)
+  const bannedVocabulary = [
+    { word: 'utilize', replace: 'use' },
+    { word: 'utilization', replace: 'use' },
+    { word: 'prior to', replace: 'before' },
+    { word: 'previous to', replace: 'before' },
+    { word: 'in order to', replace: 'to' },
+    { word: 'make a determination', replace: 'determine' },
+    { word: 'arrive at a decision', replace: 'decide' },
+    { word: 'in the event of', replace: 'if' },
+    { word: 'subsequent to', replace: 'after' },
+    { word: 'terminate', replace: 'end' },
+    { word: 'shall', replace: 'must or will' },
+    { word: 'close proximity', replace: 'adjacent' },
+    { word: 'conducts', replace: 'direct verb like "validates" or "compares"' },
+    { word: 'performs', replace: 'direct verb like "inspects" or "purges"' },
+    { word: 'participates in', replace: 'omit or rewrite' },
+    { word: 'currently', replace: 'omit (implied by present tense)' }
+  ];
+
+  bannedVocabulary.forEach(bv => {
+    const regex = new RegExp(`\\b${bv.word}\\b`, 'gi');
+    if (regex.test(body)) {
+      diagnostics.push(`STYLE: Banned term "${bv.word}" detected. Replace with "${bv.replace}".`);
+    }
+  });
+
+  // 6. Sentence Economy Check (sentences <= 20 words target)
+  const sentences = body.split(/[.!?\n]/).map(s => s.trim()).filter(s => s.length > 5);
+  sentences.forEach(s => {
+    const wordCount = s.split(/\s+/).length;
+    if (wordCount > 25) {
+      diagnostics.push(`ECONOMY: Sentence is too long (${wordCount} words). Target 20 words or fewer for clarity: "${s.substring(0, 30)}..."`);
+    }
+  });
+
+  // 7. Check Cross-Agent Interaction Boundaries
+  const boundaryMatch = commpackBoundaries.find(b => b.fromAgent === from && b.toAgent === to);
+  if (!boundaryMatch) {
+    diagnostics.push(`BOUNDARY: No communication path defined between "${from}" and "${to}". Route blocked.`);
+  } else if (!boundaryMatch.enabled) {
+    diagnostics.push(`BOUNDARY: Communication path from "${from}" to "${to}" is currently DISABLED.`);
+  } else if (!boundaryMatch.allowedTypes.includes(type)) {
+    diagnostics.push(`BOUNDARY: Sender "${from}" is blocked from sending TYPE "${type}" to "${to}". Allowed types: [${boundaryMatch.allowedTypes.join(', ')}]`);
+  }
+
+  const isValid = !diagnostics.some(d => d.startsWith('CRITICAL') || d.startsWith('BOUNDARY') || d.startsWith('SYNTAX'));
+
+  return { isValid, diagnostics };
+}
+
+// GET active messages
+app.get('/api/commpack/messages', (req: Request, res: Response) => {
+  res.json({ messages: commpackMessages });
+});
+
+// POST message (Validate and log)
+app.post('/api/commpack/messages', (req: Request, res: Response) => {
+  const { from, to, priority, type, status, bluf, body } = req.body;
+
+  if (!from || !to || !priority || !type || !status || !bluf || !body) {
+    return res.status(400).json({ error: 'Missing core message envelope fields' });
+  }
+
+  const { isValid, diagnostics } = validateCommpackMessage(from, to, type, status, bluf, body);
+
+  const newMessage: CommpackMessage = {
+    id: 'msg-' + Date.now(),
+    from,
+    to,
+    priority,
+    type,
+    status,
+    bluf,
+    body,
+    timestamp: new Date().toISOString(),
+    isValid,
+    diagnostics,
+  };
+
+  commpackMessages.unshift(newMessage);
+  res.status(201).json({ success: true, message: newMessage });
+});
+
+// GET boundaries
+app.get('/api/commpack/boundaries', (req: Request, res: Response) => {
+  res.json({ boundaries: commpackBoundaries });
+});
+
+// POST append boundary
+app.post('/api/commpack/boundaries', (req: Request, res: Response) => {
+  const { fromAgent, toAgent, allowedTypes, enabled = true } = req.body;
+
+  if (!fromAgent || !toAgent || !allowedTypes || !Array.isArray(allowedTypes)) {
+    return res.status(400).json({ error: 'Missing mandatory boundary definition fields' });
+  }
+
+  const newBoundary: CommpackBoundary = {
+    id: 'b-' + Date.now(),
+    fromAgent,
+    toAgent,
+    allowedTypes,
+    enabled: Boolean(enabled),
+  };
+
+  commpackBoundaries.push(newBoundary);
+  res.status(201).json({ success: true, boundary: newBoundary });
+});
+
+// PUT update boundary status
+app.put('/api/commpack/boundaries/:id', (req: Request, res: Response) => {
+  const boundary = commpackBoundaries.find(b => b.id === req.params.id);
+  if (!boundary) {
+    return res.status(404).json({ error: 'Boundary rule not found' });
+  }
+
+  const { enabled, allowedTypes } = req.body;
+  if (enabled !== undefined) {
+    boundary.enabled = Boolean(enabled);
+  }
+  if (allowedTypes !== undefined && Array.isArray(allowedTypes)) {
+    boundary.allowedTypes = allowedTypes;
+  }
+
+  res.json({ success: true, boundary });
+});
+
+// POST manual validation block
+app.post('/api/commpack/validate', (req: Request, res: Response) => {
+  const { from, to, type, status, bluf, body } = req.body;
+  const result = validateCommpackMessage(from || '', to || '', type || '', status || '', bluf || '', body || '');
+  res.json(result);
+});
+
 // Start the server with Vite middleware support
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

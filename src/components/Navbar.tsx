@@ -14,6 +14,7 @@ import {
   BookOpen,
   Fingerprint,
   LayoutDashboard,
+  MessageSquare,
 } from 'lucide-react';
 import { CorepackConfig } from '../types';
 
@@ -49,6 +50,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'hitl', label: '7. HITL Task Queue', icon: ClipboardCheck, badge: 'Audit' },
     { id: 'stacker', label: '8. Stack Builder', icon: Layers, badge: 'New' },
     { id: 'authpack', label: '9. AUTHPACK Gate', icon: Fingerprint, badge: 'Secure' },
+    { id: 'commpack', label: '10. COMMPACK Bus', icon: MessageSquare, badge: 'Protocol' },
   ];
 
   return (

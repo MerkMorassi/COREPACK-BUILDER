@@ -19,6 +19,7 @@ import { AdaptiveDegradationTab } from './components/AdaptiveDegradationTab';
 import { HitlQueueTab } from './components/HitlQueueTab';
 import { CorepackStackerTab } from './components/CorepackStackerTab';
 import { AuthpackTab } from './components/AuthpackTab';
+import { CommpackTab } from './components/CommpackTab';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -151,6 +152,10 @@ export default function App() {
 
         {activeTab === 'authpack' && (
           <AuthpackTab onEnterStandalone={() => setIsStandaloneAuthpack(true)} />
+        )}
+
+        {activeTab === 'commpack' && (
+          <CommpackTab />
         )}
       </main>
 
