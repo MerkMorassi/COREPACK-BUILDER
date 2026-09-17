@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { CorepackConfig } from './types';
-import { DEFAULT_COREPACK, PRESET_COREPACKS } from './data/presets';
+import React from 'react';
+import { useAppStore } from './store';
 import { compileAllArtifacts } from './utils/compiler';
 
 import { Navbar } from './components/Navbar';
@@ -22,10 +21,17 @@ import { AuthpackTab } from './components/AuthpackTab';
 import { CommpackTab } from './components/CommpackTab';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [isStandaloneAuthpack, setIsStandaloneAuthpack] = useState<boolean>(false);
-  const [presets, setPresets] = useState<Record<string, CorepackConfig>>(PRESET_COREPACKS);
-  const [config, setConfig] = useState<CorepackConfig>(DEFAULT_COREPACK);
+  const { 
+    activeTab, 
+    setActiveTab, 
+    isStandaloneAuthpack, 
+    setIsStandaloneAuthpack, 
+    presets, 
+    setPresets, 
+    config, 
+    setConfig, 
+    resetToDefault 
+  } = useAppStore();
 
   // Compute validation issues count
   const artifacts = compileAllArtifacts(config);
@@ -36,10 +42,6 @@ export default function App() {
       // Clone deeply to prevent mutability leaks
       setConfig(JSON.parse(JSON.stringify(presets[presetId])));
     }
-  };
-
-  const handleResetToDefault = () => {
-    setConfig(JSON.parse(JSON.stringify(DEFAULT_COREPACK)));
   };
 
   const handleExportJson = () => {
@@ -56,12 +58,12 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const handleSaveCustomPreset = (newConfig: CorepackConfig) => {
+  const handleSaveCustomPreset = (newConfig: any) => {
     const newId = newConfig.metadata.id;
-    setPresets((prev) => ({
-      ...prev,
+    setPresets({
+      ...presets,
       [newId]: newConfig,
-    }));
+    });
     setConfig(newConfig);
     setActiveTab('prompts');
   };
@@ -77,19 +79,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white antialiased">
-      {/* Tabbed Navigation Header */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        currentConfig={config}
-        presets={presets}
-        onSelectPreset={handleSelectPreset}
-        onResetToDefault={handleResetToDefault}
-        onExportJson={handleExportJson}
-        defectCount={defectCount}
-      />
+      <Navbar />
 
-      {/* Main Content Viewport */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'dashboard' && (
           <DashboardTab
@@ -98,7 +89,6 @@ export default function App() {
             onNavigateTab={setActiveTab}
           />
         )}
-
         {activeTab === 'prompts' && (
           <PromptDefinitionTab
             config={config}
@@ -106,7 +96,6 @@ export default function App() {
             onNavigateToArtifacts={() => setActiveTab('artifacts')}
           />
         )}
-
         {activeTab === 'model' && (
           <ModelParametersTab
             config={config}
@@ -114,34 +103,24 @@ export default function App() {
             onNavigateToPlayground={() => setActiveTab('playground')}
           />
         )}
-
         {activeTab === 'tools' && (
           <ToolDefinitionsTab
             config={config}
             onChange={setConfig}
           />
         )}
-
         {activeTab === 'artifacts' && (
           <CompiledArtifactsTab
             config={config}
           />
         )}
-
         {activeTab === 'playground' && (
           <PlaygroundTab
             config={config}
           />
         )}
-
-        {activeTab === 'degradation' && (
-          <AdaptiveDegradationTab />
-        )}
-
-        {activeTab === 'hitl' && (
-          <HitlQueueTab />
-        )}
-
+        {activeTab === 'degradation' && <AdaptiveDegradationTab />}
+        {activeTab === 'hitl' && <HitlQueueTab />}
         {activeTab === 'stacker' && (
           <CorepackStackerTab
             availablePresets={presets}
@@ -149,17 +128,14 @@ export default function App() {
             onNavigateToPlayground={() => setActiveTab('playground')}
           />
         )}
-
         {activeTab === 'authpack' && (
-          <AuthpackTab onEnterStandalone={() => setIsStandaloneAuthpack(true)} />
+          <AuthpackTab
+            onEnterStandalone={() => setIsStandaloneAuthpack(true)}
+          />
         )}
-
-        {activeTab === 'commpack' && (
-          <CommpackTab />
-        )}
+        {activeTab === 'commpack' && <CommpackTab />}
       </main>
 
-      {/* Footer System Status Bar */}
       <footer className="bg-slate-900/80 border-t border-slate-800/80 py-3 text-center text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-slate-400">

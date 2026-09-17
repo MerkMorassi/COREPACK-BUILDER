@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAppStore } from '../store';
 import {
   LayoutDashboard,
   CheckCircle2,
@@ -23,12 +24,7 @@ import {
   Cpu,
 } from 'lucide-react';
 import { CorepackConfig } from '../types';
-
-interface DashboardTabProps {
-  config: CorepackConfig;
-  defectCount: number;
-  onNavigateTab: (tabId: string) => void;
-}
+import { compileAllArtifacts } from '../utils/compiler';
 
 interface SimulatedLog {
   timestamp: string;
@@ -37,11 +33,128 @@ interface SimulatedLog {
   status: 'INFO' | 'SUCCESS' | 'WARNING' | 'CRITICAL';
 }
 
+const ConstitutionalValidator: React.FC<{ config: CorepackConfig }> = ({ config }) => {
+  const [hashes, setHashes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const computeHashes = async () => {
+      try {
+        const sha256 = async (str: string) => {
+          const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+          return Array.from(new Uint8Array(buf))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('');
+        };
+
+        setHashes({
+          MCF_HASH: await sha256(config.metadata.substrateBinding || 'NONE'),
+          PROVENANCE_HASH: await sha256(config.metadata.author + config.metadata.version),
+          TRACE_HASH: await sha256(config.protocols.safetyRules.join('')),
+          AUDIT_HASH: await sha256(JSON.stringify(config.tools)),
+          MANIFEST_HASH: await sha256(JSON.stringify(config.skillManifest)),
+          CONSTITUTIONAL_BUNDLE_HASH: await sha256(JSON.stringify(config)),
+        });
+      } catch (e) {
+        console.error('Crypto API not available or error hashing', e);
+      }
+    };
+    computeHashes();
+  }, [config]);
+
+  const checks = [
+    {
+      name: 'MCF_HASH',
+      hash: hashes.MCF_HASH || 'PENDING...',
+      isValid: config.metadata.substrateBinding.includes('Mythos') || config.metadata.substrateBinding.includes('MCF'),
+      desc: 'Substrate Binding Law',
+    },
+    {
+      name: 'PROVENANCE_HASH',
+      hash: hashes.PROVENANCE_HASH || 'PENDING...',
+      isValid: config.metadata.author.includes('Merk') || config.metadata.author.includes('Morassi') || config.metadata.author.includes('Creative Fire'),
+      desc: 'Authoritative Commercial Anchors',
+    },
+    {
+      name: 'TRACE_HASH',
+      hash: hashes.TRACE_HASH || 'PENDING...',
+      isValid: config.protocols.safetyRules.some((r) => r.includes('INTEGRITY BEFORE COMPLETION') || r.includes('ANTI-ASSIMILATION') || r.includes('BLOCKED_SOURCE_ARTIFACT_MISMATCH')),
+      desc: 'Deterministic Safety Rules',
+    },
+    {
+      name: 'AUDIT_HASH',
+      hash: hashes.AUDIT_HASH || 'PENDING...',
+      isValid: config.tools.some((t) => t.id === 'canonicalizeInput' || t.id === 'verifyCryptographicIdentities'),
+      desc: 'Cryptographic Tool Constraints',
+    },
+    {
+      name: 'MANIFEST_HASH',
+      hash: hashes.MANIFEST_HASH || 'PENDING...',
+      isValid: config.skillManifest.allowedApis.includes('canonicalizeInput') || config.skillManifest.allowedApis.includes('verifyCryptographicIdentities'),
+      desc: 'Sandboxed Memory Execution',
+    },
+  ];
+
+  const bundleValid = checks.every((c) => c.isValid);
+  checks.push({
+    name: 'CONSTITUTIONAL_BUNDLE_HASH',
+    hash: hashes.CONSTITUTIONAL_BUNDLE_HASH || 'PENDING...',
+    isValid: bundleValid,
+    desc: 'Supreme State Synthesis',
+  });
+
+  return (
+    <div className="bg-slate-900/80 p-5 rounded-xl border border-slate-800 space-y-4" id="mcf-validator-panel">
+      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+          <ShieldAlert className={`w-4 h-4 ${bundleValid ? 'text-emerald-400' : 'text-rose-400'}`} />
+          MCF Constitutional Validator (SHA-256 Real-time Scanner)
+        </span>
+        <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${bundleValid ? 'bg-emerald-950 text-emerald-400 border-emerald-900' : 'bg-rose-950 text-rose-400 border-rose-900'}`}>
+          {bundleValid ? 'COMPLIANT : STATE VERIFIED' : 'CRITICAL VIOLATION DETECTED'}
+        </span>
+      </div>
+      <div className="space-y-2">
+        {checks.map((check) => (
+          <div key={check.name} className={`p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${check.isValid ? 'bg-slate-950 border-slate-800/80' : 'bg-rose-950/20 border-rose-900/50'}`}>
+            <div className="space-y-1 w-full sm:w-1/3">
+              <div className="flex items-center gap-2">
+                {check.isValid ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <XCircle className="w-3.5 h-3.5 text-rose-400" />}
+                <span className="text-xs font-bold text-slate-200 font-mono tracking-tight">{check.name}</span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-normal ml-5">{check.desc}</p>
+            </div>
+            <div className="w-full sm:w-2/3 flex flex-col items-start sm:items-end font-mono">
+              <span className={`text-[9px] break-all ${check.isValid ? 'text-slate-500' : 'text-rose-400/80'}`}>
+                {check.hash}
+              </span>
+              <span className={`text-[10px] font-bold mt-1 ${check.isValid ? 'text-emerald-500/70' : 'text-rose-500'}`}>
+                {check.isValid ? 'VALID' : 'VIOLATION DETECTED'}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+interface DashboardTabProps {
+  config?: CorepackConfig;
+  defectCount?: number;
+  onNavigateTab?: (tabId: string) => void;
+}
+
 export const DashboardTab: React.FC<DashboardTabProps> = ({
-  config,
-  defectCount,
-  onNavigateTab,
+  config: propConfig,
+  defectCount: propDefectCount,
+  onNavigateTab: propOnNavigateTab,
 }) => {
+  const store = useAppStore();
+  const config = propConfig ?? store.config;
+  const setActiveTab = store.setActiveTab;
+  const onNavigateTab = propOnNavigateTab ?? setActiveTab;
+  const artifacts = compileAllArtifacts(config);
+  const defectCount = propDefectCount ?? artifacts.defectValidationResult.errors.length;
   const [showTutorial, setShowTutorial] = useState<boolean>(true);
   const [simulatedLogs, setSimulatedLogs] = useState<SimulatedLog[]>([
     {
@@ -556,6 +669,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Real-time MCF Constitutional Validator */}
+      <ConstitutionalValidator config={config} />
 
       {/* Operational Event Log Terminal Area */}
       <div className="bg-slate-900/80 p-5 rounded-xl border border-slate-800 space-y-3" id="operational-logs-terminal">

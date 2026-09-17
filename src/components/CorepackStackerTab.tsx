@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Layers,
   Plus,
@@ -18,14 +18,38 @@ import {
   ChevronDown,
   GitCommit,
   ArrowRight,
+  Book,
+  ShieldCheck,
 } from 'lucide-react';
 import { CorepackConfig, ToolDefinition } from '../types';
+import { LogicFlowCanvas } from './LogicFlowCanvas';
 
 interface CorepackStackerTabProps {
   availablePresets: Record<string, CorepackConfig>;
   onSaveCustomPreset: (newConfig: CorepackConfig) => void;
   onNavigateToPlayground: () => void;
 }
+
+const MCF_VERSIONS = [
+  {
+    version: '1.0.0',
+    name: 'Genesis MCF Directive',
+    hash: '8a5299424bd0453392476d1e4eb41e4d8ef53d9a9ef9ff10b776a38b16ef5d6c',
+    description: 'Original baseline constitutional framework for sovereign LIA nodes.',
+  },
+  {
+    version: '1.1.0',
+    name: 'Strict Materialist Patch',
+    hash: 'c8b3d6f1a4e23c79462b8a01490212874138c29b71f98d41e2a568b91931f08e',
+    description: 'Enhanced validation against assimilation parameters and unauthorized vault access.',
+  },
+  {
+    version: '2.0.0',
+    name: 'SOMA Orchestration Framework',
+    hash: 'f9a242c174092b3a9856f4d23719087ab2f349c18d9f1025a120b5e8697193b2',
+    description: 'Multi-agent consensus laws and dual-entity (AZ/DC) commercial anchor routing.',
+  },
+];
 
 export const CorepackStackerTab: React.FC<CorepackStackerTabProps> = ({
   availablePresets,
@@ -41,6 +65,8 @@ export const CorepackStackerTab: React.FC<CorepackStackerTabProps> = ({
   const [customId, setCustomId] = useState('custom-orchestration-stack');
   const [customRole, setCustomRole] = useState('Multi-Agent coordinated workflows');
   const [customObjective, setCustomObjective] = useState('Synthesize capabilities of stacked modules to run enterprise-grade reasoning gates.');
+  const [selectedMcfVersion, setSelectedMcfVersion] = useState<string | null>(null);
+
   
   // Target model parameters state (defaults)
   const [selectedModel, setSelectedModel] = useState<'gemini-3.8-flash' | 'gemini-3.1-pro-preview' | 'gemini-3.1-flash-lite'>('gemini-3.8-flash');
@@ -120,6 +146,41 @@ export const CorepackStackerTab: React.FC<CorepackStackerTabProps> = ({
 
   const combinedTools = getCombinedTools();
 
+  // Predictive Chain Debugger Logic
+  const runPredictiveDebugger = () => {
+    const findings: { type: 'error' | 'warning', message: string }[] = [];
+    
+    // 1. Tool Collisions
+    const seenToolIds = new Set<string>();
+    stackedIds.forEach(id => {
+      const preset = availablePresets[id];
+      if (preset) {
+        preset.tools.forEach(tool => {
+          if (seenToolIds.has(tool.id)) {
+            findings.push({ type: 'warning', message: `Tool collision detected for ID: ${tool.id}.` });
+          } else {
+            seenToolIds.add(tool.id);
+          }
+        });
+      }
+    });
+
+    // 2. Model Variability Warning
+    const usedModels = new Set(stackedIds.map(id => availablePresets[id]?.modelParameters.model).filter(Boolean));
+    if (usedModels.size > 1) {
+      findings.push({ type: 'warning', message: `Model variability: ${Array.from(usedModels).join(', ')}. This may lead to latency shifts.` });
+    }
+    
+    // 3. MCF Check
+    if (stackedIds.length > 0 && !selectedMcfVersion) {
+      findings.push({ type: 'error', message: 'No MCF Constitution embedded. Stack requires sovereign binding.' });
+    }
+
+    return findings;
+  };
+
+  const predictiveFindings = useMemo(() => runPredictiveDebugger(), [stackedIds, availablePresets, selectedMcfVersion]);
+
   // Handle saving the stack
   const handleCompileStack = () => {
     if (stackedIds.length === 0) {
@@ -182,9 +243,15 @@ export const CorepackStackerTab: React.FC<CorepackStackerTabProps> = ({
       }
     });
 
+    // Determine embedded MCF metadata
+    const selectedMcf = MCF_VERSIONS.find(v => v.version === selectedMcfVersion);
+    const mcfBinding = selectedMcf 
+      ? `\n\n[CONSTITUTIONAL REGISTRY EMBED]: Operating under ${selectedMcf.name} (v${selectedMcf.version}). MCF_HASH: ${selectedMcf.hash}`
+      : '';
+
     // Synthesize Substrate Binding
     const firstPreset = availablePresets[stackedIds[0]];
-    const generatedSubstrateBinding = `You are running a composite COGNITIVE STACK containing: [${stackedIds.map(id => availablePresets[id]?.metadata.name).join(', ')}]. \n\nPrimary Orchestration Objective: ${customObjective}\n\nPrimary Substrate Constraint: ${firstPreset?.metadata.substrateBinding || ''}`;
+    const generatedSubstrateBinding = `You are running a composite COGNITIVE STACK containing: [${stackedIds.map(id => availablePresets[id]?.metadata.name).join(', ')}]. \n\nPrimary Orchestration Objective: ${customObjective}\n\nPrimary Substrate Constraint: ${firstPreset?.metadata.substrateBinding || ''}${mcfBinding}`;
 
     // Create custom compiled Corepack config
     const newConfig: CorepackConfig = {
@@ -277,7 +344,7 @@ export const CorepackStackerTab: React.FC<CorepackStackerTabProps> = ({
               Select blocks below to pile them onto your orchestrator stack. Order represents execution authority.
             </p>
 
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
               {presetList.map((preset) => {
                 const isAlreadyStacked = stackedIds.includes(preset.metadata.id);
                 return (
@@ -325,6 +392,54 @@ export const CorepackStackerTab: React.FC<CorepackStackerTabProps> = ({
               })}
             </div>
           </div>
+
+          <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+            <h3 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+              <Book className="w-4 h-4 text-emerald-400" />
+              Constitutional Registry
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Select an MCF version to embed its SHA-256 identity constraint into the final synthesized stack.
+            </p>
+
+            <div className="space-y-3">
+              {MCF_VERSIONS.map((mcf) => {
+                const isSelected = selectedMcfVersion === mcf.version;
+                return (
+                  <div
+                    key={mcf.version}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                      isSelected 
+                        ? 'bg-emerald-950/30 border-emerald-500/50 shadow-sm shadow-emerald-900/20' 
+                        : 'bg-slate-950 border-slate-800/80 hover:border-slate-700'
+                    }`}
+                    onClick={() => setSelectedMcfVersion(isSelected ? null : mcf.version)}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-xs font-bold ${isSelected ? 'text-emerald-400' : 'text-slate-200'}`}>
+                        {mcf.name}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono">v{mcf.version}</span>
+                    </div>
+                    <div className="font-mono text-[9px] text-slate-500 break-all mb-2 leading-tight">
+                      {mcf.hash}
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-snug">
+                      {mcf.description}
+                    </p>
+                    <div className="mt-2 flex justify-end">
+                      {isSelected && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-1">
+                          <ShieldCheck className="w-3 h-3" />
+                          Embedded
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Middle Column: The Active Stack & Merging Controls */}
@@ -336,172 +451,59 @@ export const CorepackStackerTab: React.FC<CorepackStackerTabProps> = ({
                 2. Active Stack Layout
               </h3>
               
-              {stackedIds.length > 0 && (
-                <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-850 text-xs font-mono self-start sm:self-auto gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('pipeline')}
-                    className={`px-2.5 py-1 rounded-md transition-all font-semibold cursor-pointer ${viewMode === 'pipeline' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-950/40' : 'text-slate-400 hover:text-slate-200'}`}
-                  >
-                    Logic Flow Chain
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('simple')}
-                    className={`px-2.5 py-1 rounded-md transition-all font-semibold cursor-pointer ${viewMode === 'simple' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-950/40' : 'text-slate-400 hover:text-slate-200'}`}
-                  >
-                    Simple Blocks
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('list')}
-                    className={`px-2.5 py-1 rounded-md transition-all font-semibold cursor-pointer ${viewMode === 'list' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-950/40' : 'text-slate-400 hover:text-slate-200'}`}
-                  >
-                    Classic List
-                  </button>
-                </div>
-              )}
+              <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-850 text-xs font-mono self-start sm:self-auto gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('pipeline')}
+                  className={`px-2.5 py-1 rounded-md transition-all font-semibold cursor-pointer ${viewMode === 'pipeline' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-950/40' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Logic Flow Chain
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('simple')}
+                  className={`px-2.5 py-1 rounded-md transition-all font-semibold cursor-pointer ${viewMode === 'simple' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-950/40' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Simple Blocks
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`px-2.5 py-1 rounded-md transition-all font-semibold cursor-pointer ${viewMode === 'list' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-950/40' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Classic List
+                </button>
+              </div>
             </div>
 
             {/* Visual Stack Rendering */}
             {stackedIds.length === 0 ? (
-              <div className="border border-dashed border-slate-800 rounded-xl p-8 text-center bg-slate-950/40">
-                <Layers className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <p className="text-xs text-slate-400">Your corepack stack is currently empty.</p>
-                <p className="text-[10px] text-slate-500 mt-1">Add available blocks from the left sidebar to start stacking.</p>
+              <div className="border-2 border-dashed border-slate-800 rounded-xl p-10 text-center bg-slate-950/40 flex flex-col items-center justify-center min-h-[300px]">
+                <Workflow className="w-10 h-10 text-indigo-500/50 mb-3" />
+                <h4 className="text-sm font-bold text-slate-300">Your Process Chain is Empty</h4>
+                <p className="text-xs text-slate-500 mt-2 max-w-sm">
+                  Add available COREPACK modules from the left sidebar to start building your multi-agent logic flow chain.
+                </p>
+                {viewMode === 'pipeline' && (
+                   <div className="mt-6 flex flex-col items-center opacity-40 select-none pointer-events-none">
+                     <div className="px-3 py-1 bg-slate-900 border border-slate-800 rounded-lg text-[9px] font-mono text-slate-500">INGRESS</div>
+                     <div className="h-6 w-px bg-slate-800"></div>
+                     <div className="w-32 h-12 border border-slate-800 rounded-lg bg-slate-900 border-dashed"></div>
+                     <div className="h-6 w-px bg-slate-800"></div>
+                     <div className="px-3 py-1 bg-slate-900 border border-slate-800 rounded-lg text-[9px] font-mono text-slate-500">EGRESS</div>
+                   </div>
+                )}
               </div>
             ) : viewMode === 'pipeline' ? (
-              /* High Fidelity Logic Chain Pipeline Flowchart */
-              <div className="space-y-1 bg-slate-950/40 p-5 rounded-xl border border-slate-800/60" id="logic-chain-pipeline-container">
-                {/* 1. Ingress Entry Point */}
-                <div className="flex flex-col items-center select-none pb-1" id="flow-ingress-point">
-                  <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl flex items-center gap-2.5 shadow-sm text-[10px] text-indigo-300 font-mono font-bold tracking-wider">
-                    <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-                    COGNITIVE WORKSPACE INGRESS
-                  </div>
-                  <div className="h-6 w-0.5 bg-gradient-to-b from-indigo-500/80 to-indigo-500/30"></div>
-                </div>
-
-                {/* 2. Chain Blocks */}
-                {stackedIds.map((id, idx) => {
-                  const preset = availablePresets[id];
-                  if (!preset) return null;
-                  
-                  // Sequential accent borders to illustrate logic flow cascade
-                  const accentColors = [
-                    'border-l-indigo-500',
-                    'border-l-blue-500',
-                    'border-l-teal-500',
-                    'border-l-emerald-500',
-                    'border-l-cyan-500',
-                  ];
-                  const borderAccent = accentColors[idx % accentColors.length];
-
-                  return (
-                    <React.Fragment key={`${id}-flow-${idx}`}>
-                      <div className={`p-4 bg-slate-900 border border-slate-800 border-l-4 ${borderAccent} rounded-xl shadow-md transition-all hover:border-slate-750 relative group`}>
-                        {/* Top Header */}
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-6 h-6 rounded bg-slate-950 border border-slate-850 flex items-center justify-center text-[11px] font-mono font-extrabold text-indigo-400">
-                              0{idx + 1}
-                            </div>
-                            <div className="text-left">
-                              <span className="text-xs font-bold text-slate-100 block">{preset.metadata.name}</span>
-                              <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest font-semibold block">
-                                STACK LAYER PRIORITY: {idx + 1}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Interactive Reorder Buttons embedded in flow node */}
-                          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-850">
-                            <button
-                              type="button"
-                              onClick={() => handleMoveUp(idx)}
-                              disabled={idx === 0}
-                              className="p-1 text-slate-400 hover:text-slate-100 disabled:opacity-20 disabled:pointer-events-none rounded hover:bg-slate-900 transition-all cursor-pointer"
-                              title="Move block up in priority"
-                            >
-                              <ArrowUp className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveDown(idx)}
-                              disabled={idx === stackedIds.length - 1}
-                              className="p-1 text-slate-400 hover:text-slate-100 disabled:opacity-20 disabled:pointer-events-none rounded hover:bg-slate-900 transition-all cursor-pointer"
-                              title="Move block down in priority"
-                            >
-                              <ArrowDown className="w-3.5 h-3.5" />
-                            </button>
-                            <div className="w-px h-3.5 bg-slate-800 mx-0.5"></div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveBlock(idx)}
-                              className="p-1 text-rose-500/80 hover:text-rose-400 rounded hover:bg-slate-900 transition-all cursor-pointer"
-                              title="Remove block from stack"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Specialist Role description */}
-                        <div className="mt-2 pl-8.5 text-left">
-                          <p className="text-[11px] text-slate-300 leading-relaxed font-sans font-medium">
-                            {preset.metadata.specialtyRole}
-                          </p>
-                          <p className="text-[10px] text-slate-500 mt-1 italic font-sans truncate" title={preset.metadata.coreObjective}>
-                            Objective: {preset.metadata.coreObjective}
-                          </p>
-                        </div>
-
-                        {/* Directives and tool mapping count */}
-                        <div className="mt-3.5 pl-8.5 pt-2 border-t border-slate-950 flex flex-wrap items-center gap-2 text-[10px]">
-                          <span className="text-slate-500 font-mono text-[9px] font-bold uppercase mr-1">Directives Feed:</span>
-                          
-                          {/* Model Badge */}
-                          <span className="px-1.5 py-0.5 bg-slate-950 border border-slate-850 text-indigo-300 rounded font-mono">
-                            {preset.modelParameters.model}
-                          </span>
-
-                          {/* Tools Badge */}
-                          <span className="px-1.5 py-0.5 bg-slate-950 border border-slate-850 text-emerald-400 rounded flex items-center gap-1 font-mono">
-                            <Wrench className="w-3 h-3 text-emerald-500/70" />
-                            {preset.tools.length} Tools
-                          </span>
-
-                          {/* Safety Badge */}
-                          <span className="px-1.5 py-0.5 bg-slate-950 border border-slate-850 text-amber-400 rounded flex items-center gap-1 font-mono">
-                            <Shield className="w-3 h-3 text-amber-500/70" />
-                            {preset.protocols.safetyRules.length} Safety Rules
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Connection pipeline logic to the next node */}
-                      {idx < stackedIds.length - 1 && (
-                        <div className="flex flex-col items-center select-none py-1">
-                          <div className="h-9 w-0.5 bg-gradient-to-b from-indigo-500/30 to-indigo-500/80 relative flex items-center justify-center">
-                            {/* Overlay chevron showing data cascade directions */}
-                            <div className="absolute top-1/2 -translate-y-1/2 p-1 rounded-full bg-slate-900 border border-slate-800 text-indigo-400 shadow-md">
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-
-                {/* 3. Egress Output Block */}
-                <div className="flex flex-col items-center select-none pt-2" id="flow-egress-point">
-                  <div className="h-6 w-0.5 bg-gradient-to-b from-indigo-500/80 to-indigo-500/30"></div>
-                  <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl flex items-center gap-2.5 shadow-sm text-[10px] text-emerald-300 font-mono font-bold tracking-wider">
-                    <Workflow className="w-4 h-4 text-emerald-400 animate-pulse" />
-                    COMPILED HYBRID COGNITIVE STACK
-                  </div>
-                </div>
+              /* Interactive Logic Flow Canvas */
+              <div className="bg-slate-950/40 p-5 rounded-xl border border-slate-800/60" id="logic-chain-pipeline-container">
+                <LogicFlowCanvas 
+                  stackedIds={stackedIds} 
+                  availablePresets={availablePresets}
+                  onRemoveBlock={handleRemoveBlock}
+                  onMoveUp={handleMoveUp}
+                  onMoveDown={handleMoveDown}
+                />
               </div>
             ) : viewMode === 'simple' ? (
               /* Simple Minimalist Flow Chart Style Blocks */
@@ -768,6 +770,23 @@ export const CorepackStackerTab: React.FC<CorepackStackerTabProps> = ({
                           </label>
                         );
                       })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Predictive Debugger Panel */}
+                {predictiveFindings.length > 0 && (
+                  <div className="space-y-2 pt-3 border-t border-slate-800/40">
+                    <label className="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-amber-400" />
+                      Predictive Chain Debugger
+                    </label>
+                    <div className="space-y-1.5">
+                      {predictiveFindings.map((finding, i) => (
+                        <div key={i} className={`p-2 rounded-lg text-[10px] border ${finding.type === 'error' ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-amber-950/40 border-amber-800 text-amber-300'}`}>
+                          {finding.type === 'error' ? 'ERROR: ' : 'WARN: '}{finding.message}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
